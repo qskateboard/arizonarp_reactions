@@ -1,39 +1,30 @@
 import time
 
-import requests
-import re
-
 from bs4 import BeautifulSoup
 from selenium import webdriver
-from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.by import By
-from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-import telebot
 
-account = ["login", "password"]
+account = ["", ""]
 check = "https://forum.arizona-rp.com/search/"
 
-options = webdriver.ChromeOptions()
+options = webdriver.FirefoxOptions()
 options.add_argument('--start-maximized')
-driver = webdriver.Chrome(options=options)
+driver = webdriver.Firefox(options=options, executable_path="geckodriver.exe")
 
 driver.get("https://forum.arizona-rp.com/")
 
 
 def login_to_acc(cred):
-    driver.get("https://forum.arizona-rp.com/")
+    driver.get("https://forum.arizona-rp.com/login/")
 
-    login_form = WebDriverWait(driver, 10).until(EC.visibility_of_element_located((By.XPATH, '//*[text()="Вход"]')))
-    login_form.click()
-
-    username = WebDriverWait(driver, 10).until(EC.visibility_of_element_located((By.XPATH, '//*[@name="login"]')))
-    password = WebDriverWait(driver, 10).until(EC.visibility_of_element_located((By.XPATH, '//*[@name="password"]')))
+    username = WebDriverWait(driver, 10).until(EC.visibility_of_element_located((By.NAME, 'login')))
+    password = WebDriverWait(driver, 10).until(EC.visibility_of_element_located((By.NAME, 'password')))
     username.send_keys(cred[0])
     password.send_keys(cred[1])
     password.submit()
+    time.sleep(3)
 
 
 def get_user_messages(link):
@@ -80,10 +71,15 @@ def find_by_search(author, by_link=False):
             links.append(message_link.get_attribute('href'))
 
         try:
-            next_page = driver.find_element_by_xpath("//a[text()='Вперёд']")
+            next_page = WebDriverWait(driver, 3).until(EC.visibility_of_any_elements_located((By.XPATH, "//a[text()='Вперёд']")))[0]
             next_page.click()
         except:
-            break
+            try:
+                next_page2 = WebDriverWait(driver, 3).until(EC.visibility_of_any_elements_located(
+                    (By.XPATH, "/html/body/div[2]/div/div[4]/div/div[2]/div/div/div/div/div[1]/div/span/a/span")))[0]
+                next_page2.click()
+            except:
+                break
     return links
 
 
@@ -129,25 +125,23 @@ def make_reaction(link, uid):
     return reacted
 
 
-def dis_reaction():
-    #links = get_user_messages(check)
+if __name__ == "__main__":
+    print("[+] Started")
+    target = input("[~] Введите ник цели (форумный ник): ")
 
-    with open('clowns.txt') as f:
-        lines = f.readlines()
+    login_to_acc(account)
+    links = find_by_search(target)
 
-    s = input("Всего найдено {} постов. Начать anal дебош?".format(str(len(lines))))
+    time.sleep(3)
+
+    s = input("[+] Всего найдено {} постов. Начать anal дебош?".format(str(len(links))))
+    reaction_id = int(input("[~] Введите ID реакции для установки (Лайк - 1, Гнев - 6): "))
 
     results = {'good': 0, 'bad': 0}
-    for link1 in lines:
-        if make_reaction(link1.replace("\n", ""), 6):
+    for link in links:
+        if make_reaction(link.replace("\n", ""), reaction_id):
             results['good'] += 1
         else:
             results['bad'] += 1
 
-    print("Задача завершена\n{} - Good\n{} - Bad".format(results['good'], results['bad']))
-
-
-login_to_acc(account)
-time.sleep(3)
-dis_reaction()
-#find_by_search("https://forum.arizona-rp.com/search/4926174/", True)
+    print("[+] Задача завершена!\n{} - Good\n{} - Bad".format(results['good'], results['bad']))
